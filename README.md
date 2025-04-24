@@ -103,10 +103,15 @@ ruby
 Copy
 Edit
 --->>>SCHEDULAR triggered@@@@@@@
+
 Hibernate: SELECT ... FROM informations ...
+
 vinayc200022@gmail.com
+
 $$$$$$$$ EMAIL SENT $$$$$$$$
+
 📬 Email Gotcha
+
 If you're not receiving emails, check your Spam folder.
 
 Ensure your App Password is correct.
