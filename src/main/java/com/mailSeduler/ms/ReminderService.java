@@ -31,7 +31,7 @@ public class ReminderService implements SchedulingConfigurer {
         );
     }
 
-    @Transactional
+    @Transactional(timeout = 30)
     public List<String> checkReply() {
         if (!schedulerEnabled) {
             cancelScheduler();
