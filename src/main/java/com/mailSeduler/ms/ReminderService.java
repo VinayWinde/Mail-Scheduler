@@ -26,7 +26,7 @@ public class    ReminderService {
 
 
     // Method that checks all forms and returns a list of emails where fields are missing and submittedAt > 2 mins
-    @Transactional
+
     @Scheduled(fixedRate = 60000) // every minute
     public List<String> checkReply() {
         System.out.println("--->>>SEDULER triggered@@@@@@@");
