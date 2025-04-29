@@ -1,17 +1,17 @@
 package com.mailSeduler.ms;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.stereotype.Component;
+import org.springframework.scheduling.annotation.SchedulingConfigurer;
+import org.springframework.scheduling.config.ScheduledTaskRegistrar;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ScheduledFuture;
 
 @Service
-public class    ReminderService {
+public class ReminderService implements SchedulingConfigurer {
 
     @Autowired
     private RepoSed repoSed;
@@ -19,35 +19,54 @@ public class    ReminderService {
     @Autowired
     private EmailService emailService;
 
-    // Assuming twoMinutesAgo is initialized somewhere, e.g., in the constructor
-    private LocalDateTime oneDayAgo = LocalDateTime.now().minusHours(24);
+    private ScheduledFuture<?> scheduledTask;
+    private volatile boolean schedulerEnabled = true;
+    private final LocalDateTime oneDayAgo = LocalDateTime.now().minusHours(24);
 
-    // Scheduled task that runs every minute to check for incomplete forms
+    @Override
+    public void configureTasks(ScheduledTaskRegistrar taskRegistrar) {
+        scheduledTask = taskRegistrar.getScheduler().scheduleAtFixedRate(
+                this::checkReply,
+                60000 // Runs every 60 seconds
+        );
+    }
 
-
-    // Method that checks all forms and returns a list of emails where fields are missing and submittedAt > 2 mins
-
-    @Scheduled(fixedRate = 60000) // every minute
+    @Transactional
     public List<String> checkReply() {
-        System.out.println("--->>>SEDULER triggered@@@@@@@");
+        if (!schedulerEnabled) {
+            cancelScheduler();
+            return List.of();
+        }
+
+        System.out.println("--->>>SCHEDULER triggered@@@@@@@");
         List<Form> forms = repoSed.findAll();
         List<String> emails = new ArrayList<>();
 
         for (Form form : forms) {
-            LocalDateTime submittedAt = form.getSubmittedAt();
-
-            //&& form.getSubmittedAt() != null && form.getSubmittedAt().isBefore(twoMinutesAgo)
-            if (isAnyFieldNull(form)&& form.getSubmittedAt().isBefore(oneDayAgo)&& form.getSubmittedAt() != null) {
+            if (shouldSendReminder(form)) {
                 emails.add(form.getEmail());
-                System.out.println(form.getEmail());
-                emailService.sendEmail(form.getEmail(),"Reminder to Complete Your Form","Dear user, \n\n" +
-                        "We noticed that you haven't completed your form submission. Please fill in all the required fields and submit it as soon as possible.");
+                sendReminderEmail(form);
             }
         }
+
         return emails;
     }
 
-    // Helper method to check if any required field is null
+    private boolean shouldSendReminder(Form form) {
+        return form.getSubmittedAt() != null &&
+                form.getSubmittedAt().isBefore(oneDayAgo) &&
+                isAnyFieldNull(form);
+    }
+
+    private void sendReminderEmail(Form form) {
+        emailService.sendEmail(
+                form.getEmail(),
+                "Reminder to Complete Your Form",
+                "Dear user, \n\nWe noticed you haven't completed your form. " +
+                        "Please fill all required fields."
+        );
+    }
+
     private boolean isAnyFieldNull(Form form) {
         return form.getName() == null ||
                 form.getEmail() == null ||
@@ -56,6 +75,15 @@ public class    ReminderService {
                 form.getCountry() == null;
     }
 
-    // Sends a reminder email to the user
+    // Call this to stop the scheduler permanently
+    public void stopScheduler() {
+        schedulerEnabled = false;
+    }
 
+    private void cancelScheduler() {
+        if (scheduledTask != null && !scheduledTask.isCancelled()) {
+            scheduledTask.cancel(false);
+            System.out.println("SCHEDULER STOPPED PERMANENTLY");
+        }
+    }
 }
