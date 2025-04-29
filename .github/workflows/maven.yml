@@ -52,3 +52,5 @@ jobs:
           dockerfile: Dockerfile
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
+      - name: Docker Compose up
+        run: docker-compose up --build --abort-on-container-exit

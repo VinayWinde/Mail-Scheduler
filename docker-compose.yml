@@ -1,0 +1,21 @@
+version: '3.8'
+services:
+  app:
+    build: .
+    ports:
+      - "7821:7821"
+    depends_on:
+      - db
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/newdb
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: ROOT
+
+  db:
+    image: postgres:13
+    environment:
+      POSTGRES_DB: newdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ROOT
+    ports:
+      - "5432:5432"
