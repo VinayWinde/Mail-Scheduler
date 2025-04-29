@@ -1,18 +1,21 @@
+version: '3.8'
+
 services:
   postgres:
     image: postgres:13
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}  # Default value if not set
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-maildb}
     ports:
-      - "5432"
+      - "5433:5432"  # Changed from dynamic port to avoid CI conflicts
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 5s
+      timeout: 3s
       retries: 5
-
+    volumes:
+      - postgres_data:/var/lib/postgresql/data  # Persistent storage
 
   app:
     build:
@@ -24,8 +27,19 @@ services:
     ports:
       - "7821:7821"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
-      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-maildb}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       SPRING_MAIL_USERNAME: ${SPRING_MAIL_USERNAME}
       SPRING_MAIL_PASSWORD: ${SPRING_MAIL_PASSWORD}
+      SPRING_TASK_SCHEDULING_ENABLED: "false"  # Critical for CI
+      SPRING_LIQUIBASE_ENABLED: "false"  # Disable if not needed
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7821/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: on-failure  # Auto-recover on crashes
+
+volumes:
+  postgres_data:  # Named volume for DB persistence
