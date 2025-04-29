@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -25,6 +26,7 @@ public class    ReminderService {
 
 
     // Method that checks all forms and returns a list of emails where fields are missing and submittedAt > 2 mins
+    @Transactional
     @Scheduled(fixedRate = 60000) // every minute
     public List<String> checkReply() {
         System.out.println("--->>>SEDULER triggered@@@@@@@");
